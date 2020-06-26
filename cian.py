@@ -30,7 +30,7 @@ class House:
         self.square = int(float(self.checking(info[0], "text","")[:-3].replace(",", ".")))#Находим общую площадь*
         self.room = re.search("(\d{1,10})-комн.",self.soup.find(class_="a10a3f92e9--title--2Widg").text).group(1)#Кол-во комнат
         self.repairs = self.checking(self.soup.find(class_="a10a3f92e9--value--3Ftu5"),"text", "")#ремонт
-        self.price = self.checking(self.soup.find(itemprop="price"), "", "content")[:-1]#Стоимость*
+        self.price = int(self.checking(self.soup.find(itemprop="price"), "", "content")[:-1].replace(" ", ""))#Стоимость*
         self.one_price = self.checking(self.soup.find(class_="a10a3f92e9--price_per_meter--hKPtN a10a3f92e9--price_per_meter--residential--1mFDW"),"text", "")[:-4]#Цена за кв. метр
         #self.ten_watches, self.data_create = self.get_watch()#за 10 дней и дата создания
         self.all_watches = re.search("(\d{1,10}) просмо", self.soup.find(class_="a10a3f92e9--link--1t8n1 a10a3f92e9--link--2mJJk").text).group(1)  # всего просмотров
@@ -186,8 +186,8 @@ def by_square(object):
 for i in range(len(objects)):
     print("start write ", i + 1, "\n")
     objects[i].write_file(i, "result.csv")
-objects = sorted(objects,key=by_address)
-#objects.sort(key=by_floor)
+objects = sorted(objects,key= lambda object: (object.floor, object.square, object.price))
+
 
 for i in range(len(objects)):
     print("start write ", i + 1, "\n")
