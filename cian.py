@@ -42,7 +42,7 @@ class House:
         self.result = [self.link, self.address, self.floor, self.max_floor, self.square, self.room, self.repairs, self.price,
                        self.one_price, self.all_watches, self.type,self.first_price, self.district, self.underground,
                        self.type_of_house] #self.ten_watches, self.data_create]
-        print(self.result)
+        #print(self.result)
 
     def check_captcha(self,res):
         if 'id="form_captcha"' in res:
@@ -110,28 +110,75 @@ def read_file(name):
   with open(name, 'br') as file:
     return str(file.read(),encoding="utf-8")
 
-def pages_number():#находим количество страниц
-    soup = BeautifulSoup(read_file("files/index1.html"), 'html.parser')
-    #количество обьявлений
-    number = int(re.search("\d{1,10}",soup.find("h3").text).group(0))#количество обьявений
-    #print("Найдено объявлений", number)
-    number = math.ceil(number/28)
-    print("Количество страниц", number)
-    return number
 
-def download_pages(number, url):#Скачиваем страницы
-    for i in range(2, number+1):
+
+def downloa(url):#Скачиваем страницы попробовать не скачивать а сразу читать
+    pages_number_list = []
+    i = 1
+    while 1:
+        if i == 1:
+            download_file.download_file(url, "files/index" + str(i) + ".html")
+            i = i + 1
+            continue
         if i==2:
             url = url + "&p=" + str(i)
         else:
             url = url.replace("&p="+str(i-1),"&p="+str(i))
-        download_file.download_file(url, "files/index"+str(i)+".html")
+
+        res = urllib.request.urlopen(url).read().decode("utf-8")
+        soup = BeautifulSoup(res, 'html.parser')
+        pages_count = int(soup.find(class_="_93444fe79c--list-item--active--3dOSi").span.text)
+        print(pages_count)
+        if pages_count == 1:
+            print("now we break")
+            break
+        pages_number_list.append(pages_count)
+        download_file.download_file(url, "files/index" + str(i) + ".html")
+        i += 1
+    print(pages_number_list)
+    return pages_number_list[-1]
 
 url = "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&foot_min=45&metro%5B0%5D=319&offer_type=flat&only_foot=2&region=4777&room3=1&room4=1"
-#download_file.download_file(url, "files/index1.html")
-number = pages_number()
-#download_pages(number, url)
+url = "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&foot_min=45&metro%5B0%5D=316&metro%5B1%5D=317&metro%5B2%5D=318&metro%5B3%5D=319&metro%5B4%5D=320&metro%5B5%5D=321&object_type%5B0%5D=2&offer_type=flat&only_foot=2&room1=1&room2=1"
 
+
+#number = download_pages(url)
+
+
+def get_link(soup):#получает список ссылок
+
+    list_of_flat = soup.find_all(class_="c6e8ba5398--header--1fV2A")
+    links = [_ for _ in range(len(list_of_flat))]
+    for i in range(len(list_of_flat)):
+        links[i] = list_of_flat[i].get('href')
+    print(links)
+    return links
+
+def download_pages(url):
+    pages_number_list = []
+    i = 1
+    flats = []
+    while 1:
+        if i==2:
+            url = url + "&p=" + str(i)
+        else:
+            url = url.replace("&p="+str(i-1),"&p="+str(i))
+        res = urllib.request.urlopen(url).read().decode("utf-8")
+        soup = BeautifulSoup(res, 'html.parser')
+        pages_count = int(soup.find(class_="_93444fe79c--list-item--active--3dOSi").span.text)
+        if i == 1:
+            flats.append(get_link(soup))
+            i = i + 1
+            continue
+
+        print(pages_count)
+        if pages_count == 1 or pages_count == 3:
+            print("now we break i - ", pages_count)
+            break
+        #flats.append(get_link(soup))
+        i += 1
+
+    return flats
 
 def get_flats():#Находим на каждой странице квартиры
     flats = [i for i in range(number)]
@@ -143,55 +190,38 @@ def get_flats():#Находим на каждой странице кварти�
         k +=1
     return flats
 
-flats = get_flats()
-print("Найдено объявлений ", len(flats)*len(flats[0]))
+#flats = get_flats()
+flats = download_pages(url)
+print("Найдено объявлений ", (len(flats)-1)*len(flats[0])+len(flats[-1]))
+
 
 objects = []
 k = 0
-def linker(number, flat):
-    global objects
-    print(threading.currentThread().getName(), number, "\n")
-    #link = flat.find(class_="c6e8ba5398--header--1fV2A").get("href")
-    house = House(link)
-    objects.append(house)
+
 
 for i in range(len(flats)):
-    if i == 1:
-        break
+    #if i == 1:
+       # break
     for j in range(len(flats[i])):
-            if j == 10:
-                break
-        #try:
+            #if j == 10:
+             #   break
+        try:
             k += 1
-            #my_thread = threading.Thread(target=linker, args=(k, flats[i][j],))
-            #my_thread.start()
-            link = flats[i][j].find(class_="c6e8ba5398--header--1fV2A").get("href")
-
-            house = House(link)
+            print(k)
+            house = House(flats[i][j])
             objects.append(house)
             #if i==len(flats)-1 and j==len(flats[i])-1:
                 #house.close()
-        #except Exception as e:
-            #print("\n\n It was error: " + str(e) + " \n\n")
-            #continue
+        except Exception as e:
+            print("\n\n It was error: " + str(e) + " \n\n")
+            continue
 
 
-def by_address(object):
-    return (object.address, object.floor)
-def by_floor(object):
-    return object.floor
-def by_square(object):
-    return object.square
 
-for i in range(len(objects)):
-    print("start write ", i + 1, "\n")
-    objects[i].write_file(i, "result.csv")
 objects = sorted(objects,key= lambda object: (object.floor, object.square, object.price))
 
-
 for i in range(len(objects)):
-    print("start write ", i + 1, "\n")
     objects[i].write_file(i, "result_sort.csv")
-#objects.sort(key=by_square)
+
 print("\n", time.time() - start_time)
 exit(0)
