@@ -1,19 +1,19 @@
 import requests
 import re
 import urllib
-import download_file
 from bs4 import BeautifulSoup
-import selenium
-import math
+
 import time
 import threading
 import csv
+import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-
+import file_treatment
 
 start_time = time.time()
 
+#https://kazan.cian.ru/sale/flat/235438508/ error
 class House:
     #driver = webdriver.Chrome(executable_path=r"C:\Users\731ru\Downloads\chromedriver\chromedriver.exe")
     def __init__(self, link):
@@ -112,37 +112,11 @@ def read_file(name):
 
 
 
-def downloa(url):#Скачиваем страницы попробовать не скачивать а сразу читать
-    pages_number_list = []
-    i = 1
-    while 1:
-        if i == 1:
-            download_file.download_file(url, "files/index" + str(i) + ".html")
-            i = i + 1
-            continue
-        if i==2:
-            url = url + "&p=" + str(i)
-        else:
-            url = url.replace("&p="+str(i-1),"&p="+str(i))
-
-        res = urllib.request.urlopen(url).read().decode("utf-8")
-        soup = BeautifulSoup(res, 'html.parser')
-        pages_count = int(soup.find(class_="_93444fe79c--list-item--active--3dOSi").span.text)
-        print(pages_count)
-        if pages_count == 1:
-            print("now we break")
-            break
-        pages_number_list.append(pages_count)
-        download_file.download_file(url, "files/index" + str(i) + ".html")
-        i += 1
-    print(pages_number_list)
-    return pages_number_list[-1]
-
 url = "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&foot_min=45&metro%5B0%5D=319&offer_type=flat&only_foot=2&region=4777&room3=1&room4=1"
 url = "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&foot_min=45&metro%5B0%5D=316&metro%5B1%5D=317&metro%5B2%5D=318&metro%5B3%5D=319&metro%5B4%5D=320&metro%5B5%5D=321&object_type%5B0%5D=2&offer_type=flat&only_foot=2&room1=1&room2=1"
 
 
-#number = download_pages(url)
+
 
 
 def get_link(soup):#получает список ссылок
@@ -154,7 +128,7 @@ def get_link(soup):#получает список ссылок
     print(links)
     return links
 
-def download_pages(url):
+def get_flats(url):
     pages_number_list = []
     i = 1
     flats = []
@@ -171,57 +145,63 @@ def download_pages(url):
             i = i + 1
             continue
 
-        print(pages_count)
-        if pages_count == 1 or pages_count == 3:
+        if pages_count == 1: #or pages_count == 3:
             print("now we break i - ", pages_count)
             break
-        #flats.append(get_link(soup))
+        print(pages_count)
+        flats.append(get_link(soup))
         i += 1
 
     return flats
 
-def get_flats():#Находим на каждой странице квартиры
-    flats = [i for i in range(number)]
-    k = 0
-    for i in range(number):
-        print("files/index"+str(i+1)+".html")
-        soup = BeautifulSoup(read_file("files/index"+str(i+1)+".html"), 'html.parser')
-        flats[i] = soup.find_all(class_='_93444fe79c--card--_yguQ')
-        k +=1
-    return flats
 
-#flats = get_flats()
-flats = download_pages(url)
-print("Найдено объявлений ", (len(flats)-1)*len(flats[0])+len(flats[-1]))
+links = get_flats(url)
+print("Найдено объявлений ", (len(links)-1)*len(links[0])+len(links[-1]))
 
-
+medium = time.time()
+print("\n", medium - start_time, "\n")
 objects = []
-k = 0
 
+def get_class(flats, start, step):
+    k = 0
+    for i in range(len(flats)):
+        if i == len(flats)/2:
+            print("\nMedium\n")
+        for j in range(start, len(flats[i]), step):
 
-for i in range(len(flats)):
-    #if i == 1:
-       # break
-    for j in range(len(flats[i])):
-            #if j == 10:
-             #   break
-        try:
-            k += 1
-            print(k)
-            house = House(flats[i][j])
-            objects.append(house)
-            #if i==len(flats)-1 and j==len(flats[i])-1:
-                #house.close()
-        except Exception as e:
-            print("\n\n It was error: " + str(e) + " \n\n")
-            continue
+            try:
+                k += 1
+                #print(k, start)
+                house = House(flats[i][j])
+                objects.append(house)
+                #if i==len(flats)-1 and j==len(flats[i])-1:
+                    #house.close()
+            except Exception as e:
+                print("\n\n It was error: "+house.link + str(e) + " \n\n" )
+                continue
 
+#get_class(links,0,1)#links, start point, end point
 
+# 56 advert - 27 sec
+# 56 advert - 37 sec
+# 56 advert - 61 sec
+th1 = threading.Thread(target=get_class, args=(links, 0, 3))
+th2 = threading.Thread(target=get_class, args=(links, 1, 3))
+th3 = threading.Thread(target=get_class, args=(links, 2, 3))
+th1.start()
+th2.start()
+th3.start()
+th1.join()
+th2.join()
+th3.join()
 
-objects = sorted(objects,key= lambda object: (object.floor, object.square, object.price))
+print("\n", time.time() - medium)
+objects = sorted(objects, key=lambda object: (object.floor, object.square, object.price))
 
+filename = "result_sort.csv"
 for i in range(len(objects)):
-    objects[i].write_file(i, "result_sort.csv")
+    objects[i].write_file(i, filename)
 
+file_treatment.change_csv_to_xlsx(filename)
+file_treatment.draw(filename)
 print("\n", time.time() - start_time)
-exit(0)
