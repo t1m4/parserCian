@@ -1,7 +1,7 @@
-Парсер с объявлений с сайта циан.
-Возможности:
-1. Скачивание всех атрибутов о квартире.
-2. Сортировка по площади, стоимости и этажу.
-3. Сохранение данных в csv файл.
-4. Ускорение работы (многопоточное парсинг)
-5. Выделение объявлений подходящих определенным условиям(больше года в публикации, цена упала на N)
+Parser with ads from the site cyan.
+Features:
+1. Downloading all attributes about the apartment.
+2. Sorting by area, value and floor.
+3. Saving data to a csv file.
+4. Speeding up the work (multi-threaded parsing)
+5. Selecting ads that meet certain conditions (more than a year in publication, the price has dropped by N)
